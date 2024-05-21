@@ -1,0 +1,71 @@
+name: GSI Build
+
+on: [push]
+
+env:
+  ROM_URL: https://huang2728.sharepoint.com/sites/hk23/_layouts/15/download.aspx?UniqueId=ddc21e84-fe9a-4272-a4f4-0dc6c1e5b187&Translate=false&tempauth=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBfZGlzcGxheW5hbWUiOiJjbG91ZHJldmUiLCJhcHBpZCI6IjljMjAwMzlhLWQ1ZGUtNDU0OC1hZTgwLTU2NTVjZmVkZDQzZSIsImF1ZCI6IjAwMDAwMDAzLTAwMDAtMGZmMS1jZTAwLTAwMDAwMDAwMDAwMC9odWFuZzI3Mjguc2hhcmVwb2ludC5jb21AZGE1YjY2NTItNDhiYy00ZDJhLTlhMjItMGI3YmMyNjgyYzkwIiwiY2FjaGVrZXkiOiIwaC5mfG1lbWJlcnNoaXB8MTAwMzIwMDI0YjNjZDFjYkBsaXZlLmNvbSIsImNpZCI6Im1JTDV0RFFMaGtLZ2E5eEVobjdKU3c9PSIsImVuZHBvaW50dXJsIjoidmdwYTdBQjhiMGNhMEs3bGY3VnhyR3pqSHlUdVZZUmFUR3BxRzQ1ZVlLYz0iLCJlbmRwb2ludHVybExlbmd0aCI6IjEzMSIsImV4cCI6IjE3MTYyOTkzMTMiLCJpcGFkZHIiOiIyMC4xOTAuMTQ0LjE2OSIsImlzbG9vcGJhY2siOiJUcnVlIiwiaXNzIjoiMDAwMDAwMDMtMDAwMC0wZmYxLWNlMDAtMDAwMDAwMDAwMDAwIiwibmJmIjoiMTcxNjI5NTcxMyIsInB1aWQiOiIxMDAzMjAwMjRCM0NEMUNCIiwic2NwIjoiYWxsZmlsZXMud3JpdGUiLCJzaWduaW5fc3RhdGUiOiJbXCJrbXNpXCJdIiwic2l0ZWlkIjoiWm1KbU5XVmtZakV0TldNeFppMDBPVFl6TFRrMVpXUXROak13TVdWaE5EQXdOVGcyIiwidGlkIjoiZGE1YjY2NTItNDhiYy00ZDJhLTlhMjItMGI3YmMyNjgyYzkwIiwidHQiOiIyIiwidXBuIjoiaGsxQGh1YW5nMjcyOC5vbm1pY3Jvc29mdC5jb20iLCJ2ZXIiOiJoYXNoZWRwcm9vZnRva2VuIn0.sfYa_ZbmvFurw7jpelxs1xJaAThimrZmzGDw78Fz3bE&ApiVersion=2.0
+  ROM_NAME: Generic
+  TZ: Asia/Shanghai
+  MIR: gof
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+       - name: Checkout
+         uses: actions/checkout@master
+
+       - name: Initializing telegram bot
+         env:
+              TOKEN: ${{ secrets.BOT_TOKEN }}
+
+         run: |
+              sudo install telegram /usr/bin
+              chmod +x build/initial.sh
+              . build/initial.sh
+
+       - name: Set up python
+         uses: actions/setup-python@v2
+         with:
+           python-version: '3.8.2'
+ 
+       - name: Install python requirements
+         run: |
+              pip install pyrogram tgcrypto
+
+       - name: Clone ErfanGSI Source Code
+         run: git clone --recurse-submodules https://github.com/HitaloSama/ErfanGSIs.git
+
+       - name: Setting up ErfanGSI requirements
+         run: |
+              sudo chmod -R 777 ErfanGSIs
+              cd ErfanGSIs
+              sudo bash setup.sh
+
+       - name: Execute Shell Script
+         env:
+              TOKEN: ${{ secrets.BOT_TOKEN }}
+              
+         run: |
+               chmod +x build/build.sh
+               . build/build.sh
+
+       - name: Copy and rename A-only build info
+         run: cp ErfanGSIs/output/*Aonly*.txt Aonly.txt
+
+       - name: Print A-Only build info
+         run: |
+              cat ErfanGSIs/output/*Aonly*.txt
+
+       - name: Print AB build info
+         run: |
+              cat ErfanGSIs/output/*-AB-*.txt
+
+       - name: Send build info to Telegram
+         env:
+              CHAT_ID: ${{ secrets.CHAT_ID }}
+              BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+              API_ID: ${{ secrets.API_ID }}
+              API_HASH: ${{ secrets.API_HASH }}
+         run: |
+              python .github/workflows/robot.py
